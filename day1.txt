@@ -1,0 +1,25 @@
+import { ApolloServer, gql } from "apollo-server";
+
+//define schema
+const typeDefs = gql`
+  type Query {
+    greet: String
+  }
+`;
+//define resolver for this query
+
+const resolvers = {
+  Query: {
+    greet: () => {
+      return "Welcome to GraphQL";
+    },
+  },
+};
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+});
+
+server.listen().then(({ url }) => {
+  console.log(`server is ready ${url}`);
+});
