@@ -1,52 +1,31 @@
-export const users = [
-  {
-    id: 101,
-    firstName: "mukesh",
-    lastName: "kumar",
-    email: "mukesh@mail.com",
-    password: "muk123",
-  },
-  {
-    id: 102,
-    firstName: "suresh",
-    lastName: "gupta",
-    email: "suresh@mail.com",
-    password: "sur123",
-  },
-  {
-    id: 103,
-    firstName: "geeta",
-    lastName: "pal",
-    email: "geeta@mail.com",
-    password: "geet123",
-  },
-];
-/* export const quotes = [
-    { name: "what a great day", by: "101" },
-    { name: "have a awesome day", by: "102" },
-    { name: "morning day starts with coffee", by: "101" }
-];
- */
----------------
-
 import { ApolloServer, gql } from "apollo-server";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
-import { users } from "./userdb.js";
+import { quotes, users } from "./userdb.js";
 const typeDefs = gql`
   type Query {
     users: [User]
+    quotes:[Quote]
   }
   type User {
     id: ID
     firstName: String
     lastName: String
     email: String
+    quotes: [Quote]
+  }
+  type Quote{
+    name: String
+    by: ID
   }
 `;
 const resolvers = {
   Query: {
     users: () => users,
+    quotes: () => quotes
   },
+  User:{
+    quotes:(ur) => quotes.filter(quote => quote.by == ur.id)
+  }
 };
 const server = new ApolloServer({
   typeDefs,
