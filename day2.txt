@@ -1,59 +1,81 @@
-import { quotes, users } from "./userdb.js";
-
-
-const resolvers = {
-    Query: {
-      users: () => users,
-      quotes: () => quotes,
-      user:(_,{id}) => users.find(user => user.id ==id),
-      iquote:(_,{by})=> quotes.filter(quote => quote.by ==by)
-    },
-    User:{
-      quotes:(ur) => quotes.filter(quote => quote.by == ur.id)
-    }
-  };
-  export default resolvers
-
-
---------
 import { ApolloServer, gql } from "apollo-server";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
- import typeDefs from './schemaGql.js'
- import resolvers from './resolvers.js'
-const server = new ApolloServer({
-  typeDefs,
-  resolvers,
-  plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
-});
 
-server.listen().then(({ url }) => {
-  console.log(`server is ready ${url}`);
-});
+const typeDefs= gql`
 
+enum MediaTypes{
 
-------
-
-import {  gql } from "apollo-server";
-
-
-const typeDefs = gql`
-  type Query {
-    users: [User]
-    user(id:ID): User
-    quotes:[Quote]
-    iquote(by:ID): [Quote]
-  }
-  type User {
+    BOOK
+    MOVIE
+}
+interface Media{
     id: ID
-    firstName: String
-    lastName: String
-    email: String
-    quotes: [Quote]
-  }
-  type Quote{
+    title: String
+    type: MediaTypes
+}
+type Book implements Media{
+    id: ID
+    title: String
+    author: String
+    type: MediaTypes
+
+}
+type Movie implements Media{
+    id: ID
+    title: String
+    director: String
+    type: MediaTypes
+
+}
+union SearchResult = Book | Movie
+
+type Query {
+    search(term: String) : [SearchResult]
+    getBooks: [Book]
+    getMovies: [Movie]
+}
+type Quote {
     name: String
     by: ID
-  }
-`;
-
-export default typeDefs
+}
+`
+const books= [
+    {id:"1",title:"1987",author:"george",type:"BOOK"},
+    {id:"2",title:"brave world",author:"Aldous",type:"BOOK"},
+]
+const movies= [
+    {id:"1",title:"inception",director:"nolan",type:"MOVIE"},
+    {id:"2",title:"the Matrix",director:"Lilly",type:"MOVIE"},
+]
+const resolvers={
+    Query: {
+        search:(_,{term}) =>{
+            return [
+                ...books.filter((book) => book.title.includes(term)),
+                ...movies.filter((movie) => movie.title.includes(term))
+            ]
+        },
+        getBooks:() => books,
+        getMovies:() => movies
+    },
+    SearchResult:{
+        __resolveType(obj){
+            if(obj.author){
+                return "Book"
+            }
+            if(obj.director){
+                return "Movie"
+            }
+            return null
+        }
+    }
+}
+const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
+  });
+  
+  server.listen().then(({ url }) => {
+    console.log(`server is ready ${url}`);
+  });
