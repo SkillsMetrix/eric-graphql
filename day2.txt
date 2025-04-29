@@ -1,1 +1,3 @@
 mongodb+srv://ericuser:eric123@cluster0.rle5i.mongodb.net/
+
+export const MONGO_URL="mongodb+srv://ericuser:eric123@cluster0.rle5i.mongodb.net/ericdb?retryWrites=true&w=majority&appName=Cluster0"
