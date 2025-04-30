@@ -1,4 +1,60 @@
-import { quotes, users } from "./userdb.js";
+
+import {  gql } from "apollo-server";
+
+
+const typeDefs = gql`
+  type Query {
+    users: [User]
+    user(_id:ID): User
+    quotes:[QuoteWithName]
+    iquote(by:ID): [Quote]
+  }
+  type QuoteWithName{
+    name: String
+    by: IdName
+  },
+  type IdName {
+    _id: String
+    firstName: String
+  }
+  type User {
+    _id: ID
+    firstName: String
+    lastName: String
+    email: String,
+    password: String,
+    quotes: [Quote]
+  }
+  type Quote{
+    name: String
+    by: ID
+  }
+  type Token{
+    token: String
+  }
+  type Mutation{
+    signupUser(userNew:UserInput):User,
+    signinUser(userSignin:UserSigninInput):Token,
+    createQuote(name:String):String
+  }
+  input UserInput {
+    firstName:String,
+    lastName:String
+    ,email:String,
+    password:String
+  }
+  input UserSigninInput {
+    email:String,
+    password:String
+  }
+`;
+
+export default typeDefs
+
+
+--------
+
+
 import mongoose from "mongoose";
 import User from "./models/User.js";
 import Quote from "./models/Quotes.js";
@@ -7,13 +63,14 @@ import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "./config.js";
 const resolvers = {
   Query: {
-    users: () => users,
-    quotes: () => quotes,
-    user: (_, { _id }) => users.find((user) => user._id == _id),
-    iquote: (_, { by }) => quotes.filter((quote) => quote.by == by),
+    users: async() => await User.find({}),
+    quotes: async() => await Quote.find({}),
+
+    user: async(_, { _id }) => await User.findOne({_id}),
+    iquote: async(_, { by }) => await Quote.find({}).populate("by","_id firstName"),
   },
   User: {
-    quotes: (ur) => quotes.filter((quote) => quote.by == ur._id),
+    quotes: async(ur) => await Quote.find({by:ur._id}),
   },
   Mutation: {
     signupUser: async (_, { userNew }) => {
@@ -52,81 +109,3 @@ const resolvers = {
   },
 };
 export default resolvers;
-------
-import { ApolloServer, gql } from "apollo-server";
-import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
-import typeDefs from "./schemaGql.js";
-import resolvers from "./resolvers.js";
-import mongoose from "mongoose";
-import { JWT_SECRET, MONGO_URL } from "./config.js";
-import jwt from "jsonwebtoken";
-
-mongoose.connect(MONGO_URL);
-mongoose.connection.on("connected", () => {
-  console.log("connected to MongoDB Atlas...!");
-});
-import "./models/User.js";
-const server = new ApolloServer({
-  typeDefs,
-  resolvers,
-  context: ({ req }) => {
-    const { authorization } = req.headers;
-    if (authorization) {
-      console.log(authorization);
-      const { userId } = jwt.verify(authorization, JWT_SECRET);
-      return { userId };
-    }
-  },
-  plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
-});
-
-server.listen().then(({ url }) => {
-  console.log(`server is ready ${url}`);
-});
-----
-
-
-
-import {  gql } from "apollo-server";
-
-
-const typeDefs = gql`
-  type Query {
-    users: [User]
-    user(_id:ID): User
-    quotes:[Quote]
-    iquote(by:ID): [Quote]
-  }
-  type User {
-    _id: ID
-    firstName: String
-    lastName: String
-    email: String,
-    password: String,
-    quotes: [Quote]
-  }
-  type Quote{
-    name: String
-    by: ID
-  }
-  type Token{
-    token: String
-  }
-  type Mutation{
-    signupUser(userNew:UserInput):User,
-    signinUser(userSignin:UserSigninInput):Token,
-    createQuote(name:String):String
-  }
-  input UserInput {
-    firstName:String,
-    lastName:String
-    ,email:String,
-    password:String
-  }
-  input UserSigninInput {
-    email:String,
-    password:String
-  }
-`;
-
-export default typeDefs
