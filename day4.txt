@@ -108,3 +108,90 @@ module.exports = resolvers;
 
 
 ----
+
+
+
+
+const { ApolloServer } = require("apollo-server");
+const gql = require("graphql-tag");
+const typeDefs = require("./typeDefs");
+const resolvers = require("./resolvers");
+
+let server;
+
+beforeEach(() => {
+  server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    context: () => ({
+      user: { id: "1", name: "Test User" }, // Simulate logged-in user
+    }),
+  });
+});
+
+describe("GraphQL Server", () => {
+  it("fetches all books", async () => {
+    const GET_BOOKS = gql`
+      query {
+        getBooks {
+          id
+          title
+          author
+        }
+      }
+    `;
+    const res = await server.executeOperation({ query: GET_BOOKS });
+    expect(res.errors).toBeUndefined();
+    expect(res.data.getBooks.length).toBeGreaterThan(0);
+  });
+
+  it("adds a new book", async () => {
+    const ADD_BOOK = gql`
+      mutation {
+        addBook(title: "Dune", author: "Frank Herbert") {
+          id
+          title
+          author
+          type
+        }
+      }
+    `;
+    const res = await server.executeOperation({ query: ADD_BOOK });
+    expect(res.errors).toBeUndefined();
+    expect(res.data.addBook.title).toBe("Dune");
+  });
+
+  it("prevents adding duplicate book", async () => {
+    const ADD_DUPLICATE = gql`
+      mutation {
+        addBook(title: "1984", author: "George Orwell") {
+          id
+        }
+      }
+    `;
+    const res = await server.executeOperation({ query: ADD_DUPLICATE });
+    expect(res.errors[0].message).toMatch(/Duplicate book/);
+  });
+
+  it("fails search if not authenticated", async () => {
+    // Simulate no user in context
+    server = new ApolloServer({
+      typeDefs,
+      resolvers,
+      context: () => ({ user: null }),
+    });
+
+    const SEARCH = gql`
+      query {
+        search(term: "Inception") {
+          ... on Movie {
+            id
+            title
+          }
+        }
+      }
+    `;
+    const res = await server.executeOperation({ query: SEARCH });
+    expect(res.errors[0].message).toMatch(/not authenticated/);
+  });
+});
